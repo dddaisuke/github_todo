@@ -1,31 +1,186 @@
-// Copyright (c) 2015, <your name>. All rights reserved. Use of this source code
-// is governed by a BSD-style license that can be found in the LICENSE file.
-
+import 'dart:async';
 import 'dart:html';
 
-import 'package:github_todo/nav_menu.dart';
-import 'package:github_todo/reverser.dart';
-import 'package:route_hierarchical/client.dart';
+import 'package:intl/intl.dart';
+import 'package:googleapis_auth/auth_browser.dart' as auth;
+import 'package:googleapis/tasks/v1.dart';
+import 'package:ctrl_alt_foo/keys.dart';
 
+//localhost:8080
+final identifier = new auth.ClientId("856496370055-fdb9a9hu69o82pmjv3ramb478gvdspo8.apps.googleusercontent.com", null);
+//final identifier = new auth.ClientId("1046747984594-99j6vctr6dh1afg9ae111s8iabgn2l1d.apps.googleusercontent.com", null);
+
+final scopes = [TasksApi.TasksScope];
+
+TasksApi api = null;
+TaskList selectedTaskList = null;
+
+/**
+ * A `hello world` application for Chrome Apps written in Dart.
+ *
+ * For more information, see:
+ * - http://developer.chrome.com/apps/api_index.html
+ * - https://github.com/dart-gde/chrome.dart
+ */
 void main() {
-  initNavMenu();
-  initReverser();
+  InputElement loginButton = querySelector('#login_button');
+  DivElement main = querySelector('#main');
 
-  // Webapps need routing to listen for changes to the URL.
-  var router = new Router();
-  router.root
-    ..addRoute(name: 'about', path: '/about', enter: showAbout)
-    ..addRoute(name: 'home', defaultRoute: true, path: '/', enter: showHome);
-  router.listen();
+  authorizedClient(loginButton, identifier, scopes).then((client) {
+    main.remove();
+
+    api = new TasksApi(client);
+    TasklistsResourceApi resources = api.tasklists;
+    resources.list().then((lists) {
+      List<TaskList> items = lists.items;
+      createTaskListSelector(items);
+    });
+  });
 }
 
-void showAbout(RouteEvent e) {
-  // Extremely simple and non-scalable way to show different views.
-  querySelector('#home').style.display = 'none';
-  querySelector('#about').style.display = '';
+void createTaskListSelector(List<TaskList> items) {
+  DivElement listTask = querySelector('#tasks_list');
+  listTask.setInnerHtml('<h2>タスク一覧</h2>');
+
+  Map<String, TaskList> list = new Map<String, TaskList>();
+  SelectElement element = new SelectElement();
+  window.console.info(element);
+  element.children.add(createOptionElement(null, 'Please select', true));
+
+  String name = window.localStorage['selectedListName'];
+
+  for (TaskList item in items) {
+    list[item.id] = item;
+
+    OptionElement elem = createOptionElement(item.id, item.title, (item.title == name));
+    element.children.add(elem);
+  }
+  element.onChange.listen((e) {
+    listSelectorOnChange(list, element);
+  });
+  listTask.children.add(element);
+
+  listSelectorOnChange(list, element);
 }
 
-void showHome(RouteEvent e) {
-  querySelector('#home').style.display = '';
-  querySelector('#about').style.display = 'none';
+void listSelectorOnChange(Map<String, TaskList> list, SelectElement element) {
+  TaskList taskList = list[element.value];
+  if (taskList == null) {
+    return;
+  }
+  window.console.log(taskList.title);
+  window.localStorage['selectedListName'] = taskList.title;
+  selectedTaskList = taskList;
+  Keys.shortcuts({
+    'Ctrl+Z, ⌘+Z': ()=> _undoTask()
+  });
+  displayTasks();
+}
+
+OptionElement createOptionElement(String value, String title, bool selected) {
+  OptionElement option = new OptionElement(value: value, selected: selected);
+  option.setInnerHtml(title);
+  return option;
+}
+
+void displayTasks() {
+  DivElement divTasks = querySelector('#task_list');
+  addRefreshButton(divTasks);
+  loadTodo();
+}
+
+void startLoader(DivElement target) {
+  DivElement divElement = new DivElement();
+  divElement.setAttribute('id', 'ajax_loader');
+  divElement.setInnerHtml("<img src='images/ajax-loader.gif'>");
+  target.append(divElement);
+}
+
+void endLoader() {
+  DivElement divElement = querySelector('#ajax_loader');
+  divElement.remove();
+}
+
+void loadTodo() {
+  DivElement divElement = querySelector('#todo_box');
+  startLoader(divElement);
+
+  TasksResourceApi resource = api.tasks;
+  resource.list(selectedTaskList.id).then((Tasks tasks) {
+    endLoader();
+//    DivElement divTodoList = querySelector('#todo_list');
+//    if (divTodoList != null) {
+//      divTodoList.remove();
+//    }
+
+    DivElement element = new DivElement();
+    element.setAttribute('id', 'todo_list');
+    divElement.append(element);
+
+    List<Task> listTask = tasks.items;
+    for (Task task in listTask.reversed) {
+      createTodo(element, task);
+    }
+  });
+}
+
+void addRefreshButton(DivElement divTasks) {
+  divTasks.setInnerHtml("<img id='refresh_button' src='images/arrow72.png'>");
+  divTasks.onClick.listen((_) {
+    DivElement divElement = querySelector('#todo_list');
+    divElement.remove();
+
+    loadTodo();
+  });
+}
+
+void createTodo(DivElement parent, Task task) {
+  if (task.status == 'completed') {
+    return;
+  }
+  if (task.notes == null) {
+    return;
+  }
+  List<String> notes = task.notes.split('\n');
+  String url = notes.first;
+
+  String description = task.notes.substring(url.length);
+
+  DivElement div = new DivElement();
+  div.setAttribute('class', 'item');
+  CheckboxInputElement elementCheck = new CheckboxInputElement();
+  elementCheck.onChange.listen((Event event) {
+    if (elementCheck.checked) {
+      task.status = 'completed';
+      api.tasks.update(task, selectedTaskList.id, task.id);
+      div.remove();
+    }
+  });
+  div.append(elementCheck);
+
+  if (task.due != null) {
+    DateFormat formatter = new DateFormat('yyyy-MM-dd');
+    String formatted = formatter.format(task.due.toLocal());
+    div.appendHtml('<div class="due">${formatted}</div>');
+  }
+  div.appendHtml('<div class="title">${task.title}</div>');
+  div.appendHtml('<div class="clearfix"></div>');
+  div.appendHtml('<div class="notes"><a href="${url}" target="_blank">${description}</a></div>');
+  parent.append(div);
+}
+
+void _undoTask() {
+  window.console.log("undo task!!!");
+}
+// Obtain an authenticated HTTP client which can be used for accessing Google
+// APIs.
+Future authorizedClient(InputElement loginButton, auth.ClientId id, scopes) {
+  return auth.createImplicitBrowserFlow(id, scopes)
+      .then((auth.BrowserOAuth2Flow flow) {
+        return flow.clientViaUserConsent(immediate: false).catchError((_) {
+          return loginButton.onClick.first.then((_) {
+            return flow.clientViaUserConsent(immediate: true);
+          });
+        }, test: (error) => error is auth.UserConsentException);
+  });
 }
