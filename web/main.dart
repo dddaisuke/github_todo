@@ -6,9 +6,10 @@ import 'package:googleapis_auth/auth_browser.dart' as auth;
 import 'package:googleapis/tasks/v1.dart';
 import 'package:ctrl_alt_foo/keys.dart';
 
-//localhost:8080
-final identifier = new auth.ClientId("856496370055-fdb9a9hu69o82pmjv3ramb478gvdspo8.apps.googleusercontent.com", null);
-//final identifier = new auth.ClientId("1046747984594-99j6vctr6dh1afg9ae111s8iabgn2l1d.apps.googleusercontent.com", null);
+// localhost:8080
+// final identifier = new auth.ClientId("1046747984594-4dhl3udd450bdvtmtfsgcep0eqv7se2s.apps.googleusercontent.com", null);
+//production
+final identifier = new auth.ClientId("1046747984594-99j6vctr6dh1afg9ae111s8iabgn2l1d.apps.googleusercontent.com", null);
 
 final scopes = [TasksApi.TasksScope];
 
@@ -165,12 +166,42 @@ void createTodo(DivElement parent, Task task) {
   }
   div.appendHtml('<div class="title">${task.title}</div>');
   div.appendHtml('<div class="clearfix"></div>');
-  div.appendHtml('<div class="notes"><a href="${url}" target="_blank">${description}</a></div>');
+
+  DivElement divNotes = new DivElement();
+  AnchorElement aLink = new AnchorElement(href: url);
+  aLink.target = "_blank";
+  aLink.text = description;
+  divNotes.append(aLink);
+  div.append(divNotes);
+
   parent.append(div);
 }
 
 void _undoTask() {
   window.console.log("undo task!!!");
+
+  TasksResourceApi resource = api.tasks;
+  resource.list(selectedTaskList.id, showCompleted: true, showDeleted: false, showHidden: false).then((Tasks tasks) {
+    List<Task> listTask = tasks.items;
+    List<Task> listCompletedTask = new List<Task>();
+    for(Task task in listTask) {
+      if(task.status == 'completed') {
+        listCompletedTask.add(task);
+      }
+    }
+
+    listCompletedTask.sort((a, b) => b.completed.compareTo(a.completed));
+
+    for(Task task in listCompletedTask) {
+      window.console.log("undo!!! " + task.title + task.completed.toString());
+      DivElement parent = querySelector('#todo_list');
+      task.status = "needsAction";
+      task.completed = null;
+      resource.update(task, selectedTaskList.id, task.id);
+      createTodo(parent, task);
+      break;
+    }
+  });
 }
 // Obtain an authenticated HTTP client which can be used for accessing Google
 // APIs.
