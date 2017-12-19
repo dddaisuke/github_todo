@@ -107,7 +107,7 @@ void loadTodo() {
   startLoader(divElement);
 
   TasksResourceApi resource = api.tasks;
-  resource.list(selectedTaskList.id).then((Tasks tasks) {
+  resource.list(selectedTaskList.id, maxResults: "100", showCompleted: false, showDeleted: false, showHidden: false).then((Tasks tasks) {
     endLoader();
 //    DivElement divTodoList = querySelector('#todo_list');
 //    if (divTodoList != null) {
@@ -203,6 +203,7 @@ void _undoTask() {
     }
   });
 }
+
 // Obtain an authenticated HTTP client which can be used for accessing Google
 // APIs.
 Future authorizedClient(InputElement loginButton, auth.ClientId id, scopes) {
