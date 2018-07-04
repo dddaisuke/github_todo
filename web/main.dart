@@ -120,9 +120,29 @@ void loadTodo() {
 
     List<Task> listTask = tasks.items;
     for (Task task in listTask.reversed) {
-      createTodo(element, task);
+      createTodo(element, new Todo(task));
     }
+
   });
+}
+
+class Todo {
+  String url;
+  String title;
+  String description;
+  String status;
+  DateTime due;
+  Task task;
+
+  Todo(Task _task) {
+    List<String> notes = _task.notes.split('\n');
+    url = notes.first;
+    description = _task.notes.substring(url.length);
+    title = _task.title;
+    status = _task.status;
+    due = _task.due;
+    task = _task;
+  }
 }
 
 void addRefreshButton(DivElement divTasks) {
@@ -135,42 +155,39 @@ void addRefreshButton(DivElement divTasks) {
   });
 }
 
-void createTodo(DivElement parent, Task task) {
-  if (task.status == 'completed') {
+void createTodo(DivElement parent, Todo todo) {
+  if (todo.status == 'completed') {
     return;
   }
-  if (task.notes == null) {
+  if (todo.description == null) {
     return;
   }
-  List<String> notes = task.notes.split('\n');
-  String url = notes.first;
-
-  String description = task.notes.substring(url.length);
 
   DivElement div = new DivElement();
   div.setAttribute('class', 'item');
+
   CheckboxInputElement elementCheck = new CheckboxInputElement();
   elementCheck.onChange.listen((Event event) {
     if (elementCheck.checked) {
-      task.status = 'completed';
-      api.tasks.update(task, selectedTaskList.id, task.id);
+      todo.task.status = 'completed';
+      api.tasks.update(todo.task, selectedTaskList.id, todo.task.id);
       div.remove();
     }
   });
   div.append(elementCheck);
 
-  if (task.due != null) {
+  if (todo.due != null) {
     DateFormat formatter = new DateFormat('yyyy-MM-dd');
-    String formatted = formatter.format(task.due.toLocal());
+    String formatted = formatter.format(todo.due.toLocal());
     div.appendHtml('<div class="due">${formatted}</div>');
   }
-  div.appendHtml('<div class="title">${task.title}</div>');
+  div.appendHtml('<div class="title">${todo.title}</div>');
   div.appendHtml('<div class="clearfix"></div>');
 
   DivElement divNotes = new DivElement();
-  AnchorElement aLink = new AnchorElement(href: url);
+  AnchorElement aLink = new AnchorElement(href: todo.url);
   aLink.target = "_blank";
-  aLink.text = description;
+  aLink.text = todo.description;
   divNotes.append(aLink);
   div.append(divNotes);
 
@@ -198,7 +215,7 @@ void _undoTask() {
       task.status = "needsAction";
       task.completed = null;
       resource.update(task, selectedTaskList.id, task.id);
-      createTodo(parent, task);
+      createTodo(parent, new Todo(task));
       break;
     }
   });
