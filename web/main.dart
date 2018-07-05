@@ -4,7 +4,7 @@ import 'dart:html';
 import 'package:intl/intl.dart';
 import 'package:googleapis_auth/auth_browser.dart' as auth;
 import 'package:googleapis/tasks/v1.dart';
-import 'package:ctrl_alt_foo/keys.dart';
+import 'package:ctrl_alt_foo2/keys.dart';
 
 // localhost:8080
 // final identifier = new auth.ClientId("1046747984594-4dhl3udd450bdvtmtfsgcep0eqv7se2s.apps.googleusercontent.com", null);
