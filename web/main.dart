@@ -6,6 +6,7 @@ import 'package:googleapis_auth/auth_browser.dart' as auth;
 import 'package:googleapis/tasks/v1.dart';
 import 'package:ctrl_alt_foo2/keys.dart';
 import 'todo.dart';
+import 'todo_model.dart';
 
 // localhost:8080
 // final identifier = new auth.ClientId("1046747984594-4dhl3udd450bdvtmtfsgcep0eqv7se2s.apps.googleusercontent.com", null);
@@ -136,6 +137,28 @@ void addRefreshButton(DivElement divTasks) {
 
     loadTodo();
   });
+}
+
+void createGroupTodo(DivElement parent, List<Todo> list) {
+  DivElement div = new DivElement();
+  div.setAttribute('class', 'items');
+  CheckboxInputElement elementCheck = new CheckboxInputElement();
+  elementCheck.onChange.listen((Event event) {
+    if (elementCheck.checked) {
+      for(Todo todo in list) {
+        todo.task.status = 'completed';
+        api.tasks.update(todo.task, selectedTaskList.id, todo.task.id);
+      }
+      div.remove();
+    }
+  });
+  div.append(elementCheck);
+
+  for(Todo todo in list) {
+    createTodo(div, todo);
+  }
+
+  parent.append(div);
 }
 
 void createTodo(DivElement parent, Todo todo) {
