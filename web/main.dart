@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:googleapis_auth/auth_browser.dart' as auth;
 import 'package:googleapis/tasks/v1.dart';
 import 'package:ctrl_alt_foo2/keys.dart';
+import 'todo.dart';
 
 // localhost:8080
 // final identifier = new auth.ClientId("1046747984594-4dhl3udd450bdvtmtfsgcep0eqv7se2s.apps.googleusercontent.com", null);
@@ -109,40 +110,22 @@ void loadTodo() {
   TasksResourceApi resource = api.tasks;
   resource.list(selectedTaskList.id, maxResults: "100", showCompleted: false, showDeleted: false, showHidden: false).then((Tasks tasks) {
     endLoader();
-//    DivElement divTodoList = querySelector('#todo_list');
-//    if (divTodoList != null) {
-//      divTodoList.remove();
-//    }
 
     DivElement element = new DivElement();
     element.setAttribute('id', 'todo_list');
     divElement.append(element);
 
     List<Task> listTask = tasks.items;
-    for (Task task in listTask.reversed) {
-      createTodo(element, new Todo(task));
+    TodoModel model = new TodoModel(listTask);
+
+    for (List<Todo> list in model.toArray()) {
+      if (list.length == 1) {
+        createTodo(element, list.first);
+      } else {
+        createGroupTodo(element, list);
+      }
     }
-
   });
-}
-
-class Todo {
-  String url;
-  String title;
-  String description;
-  String status;
-  DateTime due;
-  Task task;
-
-  Todo(Task _task) {
-    List<String> notes = _task.notes.split('\n');
-    url = notes.first;
-    description = _task.notes.substring(url.length);
-    title = _task.title;
-    status = _task.status;
-    due = _task.due;
-    task = _task;
-  }
 }
 
 void addRefreshButton(DivElement divTasks) {
