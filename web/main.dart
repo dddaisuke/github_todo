@@ -187,7 +187,17 @@ void createTodo(DivElement parent, Todo todo) {
     String formatted = formatter.format(todo.due.toLocal());
     div.appendHtml('<div class="due">${formatted}</div>');
   }
+
+  if(Uri.parse(todo.url).path.startsWith("/manabo-inc/manabo/pull/")) {
+    ImageElement img = new ImageElement(src: 'images/pr.png');
+    div.append(img);
+  } else {
+    ImageElement img = new ImageElement(src: 'images/github.png');
+    div.append(img);
+  }
+
   div.appendHtml('<div class="title">${todo.title}</div>');
+
   div.appendHtml('<div class="clearfix"></div>');
 
   DivElement divNotes = new DivElement();
