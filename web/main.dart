@@ -11,7 +11,7 @@ import 'todo_model.dart';
 // localhost:8080
 // final identifier = new auth.ClientId("1046747984594-4dhl3udd450bdvtmtfsgcep0eqv7se2s.apps.googleusercontent.com", null);
 //production
-final identifier = new auth.ClientId("1046747984594-99j6vctr6dh1afg9ae111s8iabgn2l1d.apps.googleusercontent.com", null);
+final identifier = new auth.ClientId("178534853701-ak8574da1jfo3lkjii8hm80latpvtgf2.apps.googleusercontent.com", null);
 
 final scopes = [TasksApi.TasksScope];
 
